@@ -1,0 +1,13 @@
+# ko
+*.cmd
+*.symvers
+*.ko
+*.mod
+*.mod.c
+modules.order
+
+# build objects
+*.o
+
+# vscode
+.vscode
