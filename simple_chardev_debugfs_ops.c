@@ -3,9 +3,11 @@
 #include <linux/fs.h>
 #include <linux/list.h>
 
+#include "simple_chardev_debugfs_ops.h"
+
 #include "simple_chardev_devfs_ops.h"
 
-const struct file_operations debug_fops = {
+struct file_operations debug_fops = {
     .owner = THIS_MODULE,
     .open = NULL,
     .release = NULL,
@@ -17,21 +19,33 @@ const struct file_operations debug_fops = {
 /* read all msgs stored in device */
 ssize_t msg_read(struct file *fp, char *usr_buf, size_t count, loff_t *offset)
 {
-  int res, msg_count, i, formatted_str_size, copied_str_size, total_size_copied = 0;
+  int res = 0;
+  int msg_count = 0;
+  int i = 0;
+  int formatted_str_size = 0;
+  int copied_str_size = 0;
+  int total_size_copied = 0;
   char **msg_arr = NULL; /* msg_arr is a string array consisting of all message body */
-  char *NO_MSG_PROMPT = "no msg\n";
   k_msg *pos;
   uint32_t msg_idx = 0;
+  pr_info("msg read called;\n");
+
   list_for_each_entry(pos, &MSG_HEAD, list_node)
   {
     msg_count++;
   }
+  pr_info("%d msg found; \n", msg_count);
+  pr_info("count: %ld, offset: %lld; \n", count, *offset);
 
   if (0 == msg_count)
   {
-    copy_to_user(usr_buf, NO_MSG_PROMPT, strlen(NO_MSG_PROMPT) + 1);
-    // *offset = 0;
-    goto exit;
+    res = copy_to_user(usr_buf, NO_MSG_PROMPT, sizeof(NO_MSG_PROMPT));
+    pr_info("copy_to_user res: %d; \n", res);
+    // goto exit;
+    if (*offset >= sizeof(NO_MSG_PROMPT))
+      return 0;
+    *offset = sizeof(NO_MSG_PROMPT);
+    return sizeof(NO_MSG_PROMPT);
   }
   /* init msg_arr */
   msg_arr = vmalloc(sizeof(char *) * msg_count);
@@ -54,7 +68,7 @@ ssize_t msg_read(struct file *fp, char *usr_buf, size_t count, loff_t *offset)
       res = -EFAULT;
       goto exit;
     };
-    if (0 != (res = copy_to_user(usr_buf + total_size_copied, pos->u_msg->msg_size, copied_str_size)))
+    if (0 != (res = copy_to_user(usr_buf + total_size_copied, pos->u_msg->body, copied_str_size)))
     {
       pr_err("fail to copy msg struct from kernel to userspace, ERRNO: %d;\n", res);
       goto exit;
@@ -64,7 +78,7 @@ ssize_t msg_read(struct file *fp, char *usr_buf, size_t count, loff_t *offset)
   /* add tailing \0 */
   if (0 != (res = copy_to_user(usr_buf + total_size_copied, "\0", 1)))
   {
-    pr_err("fail to copy tailing \0, ERRNO: %d;\n", res);
+    pr_err("fail to copy tailing 0, ERRNO: %d;\n", res);
     goto exit;
   }
 
@@ -79,7 +93,7 @@ exit:
   return res;
 }
 
-ssize_t msg_write(struct file *fp, char *usr_buf, size_t count, loff_t *offset)
+ssize_t msg_write(struct file *fp, const char *usr_buf, size_t count, loff_t *offset)
 {
   int res = 0;
 
@@ -88,7 +102,7 @@ ssize_t msg_write(struct file *fp, char *usr_buf, size_t count, loff_t *offset)
     pr_info("read 0 bytes of data, ignore;\n");
     return res;
   }
-  if (0 != (res = dev_handle_send_msg(usr_buf)))
+  if (0 != (res = dev_handle_send_msg((unsigned long)usr_buf)))
   {
     pr_err("error in handle sending msg, err: %d\n", res);
     return -EINVAL;
