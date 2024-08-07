@@ -6,5 +6,6 @@
 extern struct file_operations debug_fops;
 ssize_t msg_read(struct file *fp, char *usr_buf, size_t count, loff_t *offset);
 ssize_t msg_write(struct file *fp, const char *usr_buf, size_t count, loff_t *offset);
-
+int debug_open(struct inode *, struct file *);
+int debug_close(struct inode *, struct file *);
 #endif /* __SIMPLE_CHARDEV_DEBUGFS__ */

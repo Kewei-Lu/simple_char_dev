@@ -19,11 +19,13 @@ static dev_t my_dId;
 static struct cdev *my_cdev;
 static struct device *my_udev; // userspace device interface
 static struct class *my_class;
+static struct dentry *file;
+
+LIST_HEAD(MSG_HEAD);
 
 static int init_char_dev(void)
 {
   int res = 0;
-  struct dentry *file;
   pr_info("init simple_chardev;\n");
   /**
    * allocate dev id
@@ -46,7 +48,7 @@ static int init_char_dev(void)
     return -EINVAL;
   }
   cdev_init(my_cdev, &dev_fops);
-  /* add dev */
+  /* add dev to kernel */
   if (0 != (res = cdev_add(my_cdev, my_dId, CHR_DEV_CNT)))
   {
     pr_err("fail to init cdev; res: %d\n", res);
@@ -91,6 +93,7 @@ static void finish_char_dev(void)
   }
   class_destroy(my_class);
   unregister_chrdev_region(my_dId, CHR_DEV_CNT);
+  debugfs_remove(file);
   pr_info("CHR_DEV_NAME finished;\n");
 }
 

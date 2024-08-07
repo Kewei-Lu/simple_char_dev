@@ -31,8 +31,8 @@ int dev_handle_get_msg_by_id(unsigned long arg);
 
 typedef struct msg_s
 {
-  uint32_t idx;
-  uint32_t msg_size;
+  // uint32_t idx;
+  uint32_t msg_size; // msg_size should include tailing \0
   unsigned char *body;
 } msg;
 
@@ -51,12 +51,15 @@ typedef struct k_msg_s
 #define K_CMD_NR_GET_MSG_LEN (1)
 #define K_CMD_NR_GET_MSG (2)
 
+// SEND_MSG is to send a message which will be stored in kernel space
 #define K_CMD_SEND_MSG \
   _IOW(K_MAGIC_NR, K_CMD_NR_SEND_MSG, msg)
 
+// GET_MSG_LEN is to get the message size of what is now stored in kernel space
 #define K_CMD_GET_MSG_LEN \
   _IOR(K_MAGIC_NR, K_CMD_NR_GET_MSG_LEN, uint32_t)
 
+// GET_MSG is to get all the message stored in kernel space
 #define K_CMD_GET_MSG \
   _IOR(K_MAGIC_NR, K_CMD_NR_GET_MSG, msg)
 
